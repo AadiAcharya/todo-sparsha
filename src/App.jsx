@@ -1,8 +1,26 @@
-export default function App() {
+// import { useState } from 'react'
+
+import './App.css'
+
+function App() {
+  // const [count, setCount] = useState(0)
+
   return (
-    <div className="flex bg-blue-500 h-screen items-center justify-center">
-      <div className="bg-red-500 p-6 text-white">One</div>
-      <div className="bg-green-500 p-6 text-white">Two</div>
-    </div>
-  );
+    <>
+   <div>
+    Welcome to Todo Lists
+   </div>
+
+<div>
+  <div>margirita Piza</div>
+  <div>true</div>
+  <div>checkbox</div>
+  
+</div>
+
+
+    </>
+  )
 }
+
+export default App
