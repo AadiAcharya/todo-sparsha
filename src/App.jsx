@@ -1,26 +1,20 @@
 // import { useState } from 'react'
-
-import './App.css'
+import Data from "./components/Data";
+import "./App.css";
 
 function App() {
   // const [count, setCount] = useState(0)
 
   return (
-    <>
-   <div>
-    Welcome to Todo Lists
-   </div>
+    <div className=" font-sans text-center mt-25 text-2xl h-auto  flex flex-col items-center justify-center  ">
+    
 
-<div>
-  <div>margirita Piza</div>
-  <div>true</div>
-  <div>checkbox</div>
-  
-</div>
-
-
-    </>
-  )
+     
+        
+        <Data />
+     
+    </div>
+  );
 }
 
-export default App
+export default App;
