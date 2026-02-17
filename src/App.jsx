@@ -1,19 +1,16 @@
-// import { useState } from 'react'
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Memo from "./components/Memo";
+import Login from "./components/Login";
 import "./App.css";
 
 function App() {
-  // const [count, setCount] = useState(0)
-
   return (
-    
-    
-
-     
-        
-        <Memo />
-     
-    
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/memo" element={<Memo />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

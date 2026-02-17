@@ -1,14 +1,22 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import dayjs from "dayjs";
 
 const Memo = () => {
-  const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [openIndex, setOpenIndex] = useState(null);
   const [editIndex, setEditIndex] = useState(null);
   const [editText, setEditText] = useState("");
   const [editDesc, setEditDesc] = useState("");
+
+  const [tasks, setTasks] = useState(() => {
+    const savedTasks = localStorage.getItem("memos");
+    return savedTasks ? JSON.parse(savedTasks) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("memos", JSON.stringify(tasks));
+  }, [tasks]);
 
   function inputChange(event) {
     setNewTask(event.target.value);
@@ -60,7 +68,7 @@ const Memo = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 py-8 px-4">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-800">My Memo List</h1>
@@ -113,31 +121,43 @@ const Memo = () => {
               {tasks.map((task, index) => (
                 <li key={index}>
                   {editIndex === index ? (
-                    <div>
+                    <div className="p-4 flex flex-col gap-3 bg-indigo-50">
                       <input
                         type="text"
                         value={editText}
                         onChange={(e) => setEditText(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-indigo-300 rounded-lg focus:outline-none focus:border-indigo-500 transition-colors"
                       />
                       <textarea
                         name=""
                         id=""
                         value={editDesc}
                         onChange={(e) => setEditDesc(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-indigo-300 rounded-lg focus:outline-none focus:border-indigo-500 transition-colors resize-none"
                       ></textarea>
-                      <div>
-                        <button
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-                          onClick={() => saveEdit(index)}
-                        >
-                          save
-                        </button>
-                        <button
-                          onClick={cancelEdit}
-                          className="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-md text-sm transition-colors"
-                        >
-                          cancel
-                        </button>
+                      <div className="flex  justify-around gap-2">
+                        <div>
+                          <button
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                            onClick={() => saveEdit(index)}
+                          >
+                            save
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-md text-sm transition-colors"
+                          >
+                            cancel
+                          </button>
+                        </div>
+                        <div>
+                          <button
+                            className="bg-red-100 hover:bg-red-500 hover:text-white text-red-500 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                            onClick={() => deleteFromList(index)}
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ) : (
@@ -175,13 +195,6 @@ const Memo = () => {
                           >
                             Edit
                           </button>
-
-                          <button
-                            className="bg-red-100 hover:bg-red-500 hover:text-white text-red-500 px-4 py-2 rounded-md text-sm font-medium transition-colors"
-                            onClick={() => deleteFromList(index)}
-                          >
-                            Delete
-                          </button>
                         </div>
                       </div>
                     </>
@@ -195,7 +208,7 @@ const Memo = () => {
 
       {openIndex !== null && tasks[openIndex] && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4"
+          className="fixed inset-0 bg-gray-500 bg-opacity-50 flex items-center justify-center z-50 px-4"
           onClick={() => setOpenIndex(null)}
         >
           <div
