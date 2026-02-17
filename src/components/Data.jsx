@@ -1,7 +1,8 @@
 import React, { useState } from "react";
+import dayjs from 'dayjs'
 
 const Data = () => {
-  const [tasks, setTasks] = useState("");
+  const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState("");
 
   function inputChange(event) {
@@ -9,13 +10,12 @@ const Data = () => {
   }
 
   function addToList() {
-    if (newTask.trim() !== "") {
-      const updatedTasks = [...tasks, newTask];
-      setTasks(updatedTasks);
-      setNewTask("");
-      console.log(updatedTasks);
-    }
+  if (newTask.trim() !== "") {
+    const updatedTasks = [...tasks, { text: newTask, createdAt: dayjs().format("DD/MM/YYYY hh:mm A") }];
+    setTasks(updatedTasks);
+    setNewTask("");
   }
+}
   function deleteFromList(index) {
     const updateTasks = tasks.filter((_, i) => i !== index);
     setTasks(updateTasks);
@@ -48,7 +48,7 @@ const Data = () => {
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <h1 className="text-4xl font-bold text-center text-gray-800 mb-8">
-          My Todo List
+          My Memo List
         </h1>
 
         <div className="bg-white rounded-lg shadow-md p-4 mb-6">
@@ -88,7 +88,7 @@ const Data = () => {
                         {index + 1}
                       </span>
                       <span className="text-gray-700 text-lg wrap-break-words flex-1">
-                        {task}
+                        {task.text}
                       </span>
                     </div>
 
