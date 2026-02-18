@@ -1,30 +1,21 @@
-import { auth, db } from "../firebase";
-import {
-  collection,
-  addDoc,
-  getDocs,
-  deleteDoc,
-  doc,
-  query,
-  where,
-  updateDoc,
-} from "firebase/firestore";
-import { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import dayjs from "dayjs";
+import { auth, db } from "../firebase";
+import { collection, addDoc, getDocs, deleteDoc, doc, query, where, updateDoc } from "firebase/firestore";
+import { signOut } from "firebase/auth";
+import { useNavigate } from "react-router-dom";
 
 const Memo = () => {
+  const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [openIndex, setOpenIndex] = useState(null);
   const [editIndex, setEditIndex] = useState(null);
   const [editText, setEditText] = useState("");
   const [editDesc, setEditDesc] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [user, setUser] = useState(null);
-
-  const [tasks, setTasks] = useState(() => {
-    const savedTasks = localStorage.getItem("memos");
-    return savedTasks ? JSON.parse(savedTasks) : [];
-  });
+  const navigate = useNavigate();
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
@@ -37,8 +28,8 @@ const Memo = () => {
     if (!user) return;
 
     const fetchMemos = async () => {
-      const memoRef = collection(db, "memos");
-      const q = query(memoRef, where("userId", "==", user.uid));
+      const memosRef = collection(db, "memos");
+      const q = query(memosRef, where("userId", "==", user.uid));
       const querySnapshot = await getDocs(q);
       const loadedMemos = querySnapshot.docs.map((doc) => ({
         id: doc.id,
@@ -46,12 +37,9 @@ const Memo = () => {
       }));
       setTasks(loadedMemos);
     };
+
     fetchMemos();
   }, [user]);
-
-  useEffect(() => {
-    localStorage.setItem("memos", JSON.stringify(tasks));
-  }, [tasks]);
 
   function inputChange(event) {
     setNewTask(event.target.value);
@@ -78,13 +66,17 @@ const Memo = () => {
   }
 
   async function deleteFromList(index) {
-  try{
-    await deleteDoc(doc(db, "memos", tasks[index].id))
-    const updateTasks = tasks.filter((_, i) => i !== index)
-    setTasks(updateTasks)
-  } catch (error){
-    console.error("error deleting memo", error)
-  }
+    const filteredTasks = getFilteredTasks();
+    const taskToDelete = filteredTasks[index];
+    const originalIndex = tasks.findIndex(t => t.id === taskToDelete.id);
+    
+    try {
+      await deleteDoc(doc(db, "memos", tasks[originalIndex].id));
+      const updateTasks = tasks.filter((_, i) => i !== originalIndex);
+      setTasks(updateTasks);
+    } catch (error) {
+      console.error("Error deleting memo:", error);
+    }
   }
 
   function toggleNotes(index) {
@@ -92,157 +84,377 @@ const Memo = () => {
   }
 
   function startEdit(index) {
-    setEditIndex(index);
-    setEditText(tasks[index].text);
-    setEditDesc(tasks[index].description);
+    const filteredTasks = getFilteredTasks();
+    const taskToEdit = filteredTasks[index];
+    const originalIndex = tasks.findIndex(t => t.id === taskToEdit.id);
+    
+    setEditIndex(originalIndex);
+    setEditText(tasks[originalIndex].text);
+    setEditDesc(tasks[originalIndex].description);
   }
-  function saveEdit(index) {
-    const updatedTasks = tasks.map((task, i) =>
-      i === index ? { ...task, text: editText, description: editDesc } : task,
-    );
-    setTasks(updatedTasks);
-    setEditIndex(null);
-    setEditText("");
-    setEditDesc("");
+
+  async function saveEdit(index) {
+    try {
+      const memoRef = doc(db, "memos", tasks[index].id);
+      await updateDoc(memoRef, {
+        text: editText,
+        description: editDesc,
+      });
+
+      const updatedTasks = tasks.map((task, i) =>
+        i === index ? { ...task, text: editText, description: editDesc } : task
+      );
+      setTasks(updatedTasks);
+      setEditIndex(null);
+      setEditText("");
+      setEditDesc("");
+    } catch (error) {
+      console.error("Error updating memo:", error);
+    }
   }
+
   function cancelEdit() {
     setEditIndex(null);
     setEditText("");
     setEditDesc("");
   }
 
+  async function handleLogout() {
+    try {
+      await signOut(auth);
+      navigate("/");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  }
+
+  function getFilteredTasks() {
+    return tasks.filter((task) =>
+      task.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  }
+
+  const filteredTasks = getFilteredTasks();
+
   return (
-    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 py-8 px-4">
-      <div className="max-w-2xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800">My Memo List</h1>
-          <p className="text-gray-500 mt-1 text-sm">
-            {dayjs().format("dddd, MMMM D YYYY")}
-          </p>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #a8e6cf, #7ec8e3, #93c5fd)",
+        padding: "2rem 1rem",
+      }}
+    >
+      <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "2rem",
+            background: "rgba(255,255,255,0.25)",
+            backdropFilter: "blur(20px)",
+            border: "1px solid rgba(255,255,255,0.3)",
+            borderRadius: "16px",
+            padding: "1rem 1.5rem",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+          }}
+        >
+          <div>
+            <h1
+              style={{
+                fontSize: "1.8rem",
+                fontWeight: "bold",
+                color: "#1e3a8a",
+                margin: 0,
+              }}
+            >
+              📓 My Memo List
+            </h1>
+            <p
+              style={{
+                color: "#3b82f6",
+                fontSize: "0.85rem",
+                margin: "0.25rem 0 0 0",
+              }}
+            >
+              {dayjs().format("dddd, MMMM D YYYY")}
+            </p>
+          </div>
+          <button
+            onClick={handleLogout}
+            style={{
+              background: "rgba(239, 68, 68, 0.9)",
+              color: "#fff",
+              border: "none",
+              borderRadius: "8px",
+              padding: "0.6rem 1.2rem",
+              fontSize: "0.9rem",
+              fontWeight: "600",
+              cursor: "pointer",
+              transition: "opacity 0.2s",
+            }}
+            onMouseEnter={(e) => (e.target.style.opacity = "0.8")}
+            onMouseLeave={(e) => (e.target.style.opacity = "1")}
+          >
+            Logout
+          </button>
         </div>
 
-        <div className="bg-white rounded-xl shadow-md p-4 mb-6">
-          <div className="flex flex-col gap-3">
+        <div
+          style={{
+            background: "rgba(255,255,255,0.25)",
+            backdropFilter: "blur(20px)",
+            border: "1px solid rgba(255,255,255,0.3)",
+            borderRadius: "16px",
+            padding: "1.5rem",
+            marginBottom: "1.5rem",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <input
               type="text"
               placeholder="What did you work on?"
               onChange={inputChange}
               value={newTask}
               onKeyDown={(e) => e.key === "Enter" && addToList()}
-              className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500 transition-colors"
+              style={{
+                padding: "0.85rem 1rem",
+                border: "1px solid rgba(59, 130, 246, 0.3)",
+                borderRadius: "10px",
+                fontSize: "0.95rem",
+                outline: "none",
+                background: "rgba(255,255,255,0.5)",
+                color: "#1e3a8a",
+              }}
             />
             <textarea
               placeholder="Add additional info"
               rows={3}
               onChange={(e) => setNewDesc(e.target.value)}
               value={newDesc}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500 transition-colors resize-none"
+              style={{
+                padding: "0.85rem 1rem",
+                border: "1px solid rgba(59, 130, 246, 0.3)",
+                borderRadius: "10px",
+                fontSize: "0.95rem",
+                outline: "none",
+                resize: "none",
+                background: "rgba(255,255,255,0.5)",
+                color: "#1e3a8a",
+                fontFamily: "inherit",
+              }}
             />
             <button
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors shadow-sm"
               onClick={addToList}
+              style={{
+                background: "#3b82f6",
+                color: "#fff",
+                border: "none",
+                borderRadius: "10px",
+                padding: "0.85rem",
+                fontSize: "1rem",
+                fontWeight: "600",
+                cursor: "pointer",
+                transition: "opacity 0.2s",
+              }}
+              onMouseEnter={(e) => (e.target.style.opacity = "0.9")}
+              onMouseLeave={(e) => (e.target.style.opacity = "1")}
             >
               Add Memo
             </button>
           </div>
         </div>
 
-        {tasks.length > 0 && (
-          <p className="text-sm text-gray-500 mb-3 pl-1">
-            {tasks.length} memo{tasks.length > 1 ? "s" : ""}
+        <div
+          style={{
+            background: "rgba(255,255,255,0.25)",
+            backdropFilter: "blur(20px)",
+            border: "1px solid rgba(255,255,255,0.3)",
+            borderRadius: "16px",
+            padding: "1rem 1.5rem",
+            marginBottom: "1.5rem",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+          }}
+        >
+          <input
+            type="text"
+            placeholder="🔍 Search memos..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "0.85rem 1rem",
+              border: "1px solid rgba(59, 130, 246, 0.3)",
+              borderRadius: "10px",
+              fontSize: "0.95rem",
+              outline: "none",
+              background: "rgba(255,255,255,0.5)",
+              color: "#1e3a8a",
+              boxSizing: "border-box",
+            }}
+          />
+        </div>
+
+        {filteredTasks.length > 0 && (
+          <p style={{ color: "#3b82f6", fontSize: "0.9rem", marginBottom: "1rem", paddingLeft: "0.5rem" }}>
+            {filteredTasks.length} memo{filteredTasks.length > 1 ? "s" : ""} {searchQuery && `matching "${searchQuery}"`}
           </p>
         )}
 
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
-          {tasks.length === 0 ? (
-            <div className="text-center py-16 text-gray-400">
-              <p className="text-4xl mb-3">📝</p>
-              <p className="text-lg font-medium">No memos yet</p>
-              <p className="text-sm mt-1">Add something you worked on today!</p>
+        <div
+          style={{
+            background: "rgba(255,255,255,0.25)",
+            backdropFilter: "blur(20px)",
+            border: "1px solid rgba(255,255,255,0.3)",
+            borderRadius: "16px",
+            overflow: "hidden",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+          }}
+        >
+          {filteredTasks.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "4rem 1rem", color: "#3b82f6" }}>
+              <p style={{ fontSize: "3rem", margin: "0 0 1rem 0" }}>
+                {searchQuery ? "🔍" : "📝"}
+              </p>
+              <p style={{ fontSize: "1.1rem", fontWeight: "600", margin: "0 0 0.5rem 0" }}>
+                {searchQuery ? "No matching memos" : "No memos yet"}
+              </p>
+              <p style={{ fontSize: "0.9rem", margin: 0 }}>
+                {searchQuery ? "Try a different search term" : "Add something you worked on today!"}
+              </p>
             </div>
           ) : (
-            <ol className="divide-y divide-gray-100">
-              {tasks.map((task, index) => (
-                <li key={index}>
-                  {editIndex === index ? (
-                    <div className="p-4 flex flex-col gap-3 bg-indigo-50">
-                      <input
-                        type="text"
-                        value={editText}
-                        onChange={(e) => setEditText(e.target.value)}
-                        className="w-full px-4 py-3 border-2 border-indigo-300 rounded-lg focus:outline-none focus:border-indigo-500 transition-colors"
-                      />
-                      <textarea
-                        name=""
-                        id=""
-                        value={editDesc}
-                        onChange={(e) => setEditDesc(e.target.value)}
-                        className="w-full px-4 py-3 border-2 border-indigo-300 rounded-lg focus:outline-none focus:border-indigo-500 transition-colors resize-none"
-                      ></textarea>
-                      <div className="flex  justify-around gap-2">
-                        <div>
-                          <button
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-                            onClick={() => saveEdit(index)}
-                          >
-                            save
-                          </button>
-                          <button
-                            onClick={cancelEdit}
-                            className="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-md text-sm transition-colors"
-                          >
-                            cancel
-                          </button>
-                        </div>
-                        <div>
-                          <button
-                            className="bg-red-100 hover:bg-red-500 hover:text-white text-red-500 px-4 py-2 rounded-md text-sm font-medium transition-colors"
-                            onClick={() => deleteFromList(index)}
-                          >
-                            Delete
-                          </button>
-                        </div>
+            <ol style={{ listStyle: "none", padding: 0, margin: 0 }}>
+              {filteredTasks.map((task, index) => (
+                <li
+                  key={task.id}
+                  style={{
+                    borderBottom: index !== filteredTasks.length - 1 ? "1px solid rgba(59, 130, 246, 0.2)" : "none",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "1rem",
+                      padding: "1rem 1.5rem",
+                      cursor: "pointer",
+                      background: "transparent",
+                      transition: "background 0.2s",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.2)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <span
+                      style={{
+                        minWidth: "32px",
+                        height: "32px",
+                        background: "#60a5fa",
+                        color: "#fff",
+                        borderRadius: "50%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      {index + 1}
+                    </span>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ color: "#1e3a8a", fontSize: "1rem", fontWeight: "600", margin: "0 0 0.3rem 0" }}>
+                        {task.text}
+                      </p>
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "0.3rem",
+                          background: "rgba(96, 165, 250, 0.2)",
+                          padding: "0.2rem 0.6rem",
+                          borderRadius: "6px",
+                        }}
+                      >
+                        <span style={{ fontSize: "0.75rem" }}>🕐</span>
+                        <span style={{ fontSize: "0.75rem", color: "#2563eb", fontWeight: "500" }}>
+                          {task.createdAt}
+                        </span>
                       </div>
                     </div>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors">
-                        <span className="shrink-0 w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-semibold text-sm">
-                          {index + 1}
-                        </span>
 
-                        <div className="flex-1 min-w-0">
-                          <p className="text-gray-800 text-base font-medium">
-                            {task.text}
-                          </p>
-                          <div className="flex items-center gap-1 mt-1 bg-indigo-50 w-fit px-2 py-0.5 rounded-md">
-                            <span className="text-xs">🕐</span>
-                            <span className="text-xs text-indigo-400 font-medium">
-                              {task.createdAt}
-                            </span>
-                          </div>
-                        </div>
+                    <span style={{ color: "#60a5fa", fontSize: "0.9rem" }}>
+                      {openIndex === tasks.findIndex(t => t.id === task.id) ? "▲" : "▼"}
+                    </span>
 
-                        <div className="flex gap-2">
-                          {task.description && (
-                            <button
-                              onClick={() => toggleNotes(index)}
-                              className="bg-indigo-100 hover:bg-indigo-200 text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                            >
-                              Notes
-                            </button>
-                          )}
-
-                          <button
-                            onClick={() => startEdit(index)}
-                            className="bg-indigo-300 hover:bg-indigo-200 text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                          >
-                            Edit
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  )}
+                    <div
+                      style={{ display: "flex", gap: "0.5rem" }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {task.description && (
+                        <button
+                          onClick={() => {
+                            const originalIndex = tasks.findIndex(t => t.id === task.id);
+                            toggleNotes(originalIndex);
+                          }}
+                          style={{
+                            background: "#60a5fa",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: "8px",
+                            padding: "0.5rem 1rem",
+                            fontSize: "0.85rem",
+                            fontWeight: "600",
+                            cursor: "pointer",
+                            transition: "opacity 0.2s",
+                          }}
+                          onMouseEnter={(e) => (e.target.style.opacity = "0.8")}
+                          onMouseLeave={(e) => (e.target.style.opacity = "1")}
+                        >
+                          Notes
+                        </button>
+                      )}
+                      <button
+                        onClick={() => startEdit(index)}
+                        style={{
+                          background: "#10b981",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: "8px",
+                          padding: "0.5rem 1rem",
+                          fontSize: "0.85rem",
+                          fontWeight: "600",
+                          cursor: "pointer",
+                          transition: "opacity 0.2s",
+                        }}
+                        onMouseEnter={(e) => (e.target.style.opacity = "0.8")}
+                        onMouseLeave={(e) => (e.target.style.opacity = "1")}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => deleteFromList(index)}
+                        style={{
+                          background: "rgba(239, 68, 68, 0.9)",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: "8px",
+                          padding: "0.5rem 1rem",
+                          fontSize: "0.85rem",
+                          fontWeight: "600",
+                          cursor: "pointer",
+                          transition: "opacity 0.2s",
+                        }}
+                        onMouseEnter={(e) => (e.target.style.opacity = "0.8")}
+                        onMouseLeave={(e) => (e.target.style.opacity = "1")}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
                 </li>
               ))}
             </ol>
@@ -252,40 +464,188 @@ const Memo = () => {
 
       {openIndex !== null && tasks[openIndex] && (
         <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-50 flex items-center justify-center z-50 px-4"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.4)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 50,
+            padding: "1rem",
+            backdropFilter: "blur(4px)",
+          }}
           onClick={() => setOpenIndex(null)}
         >
           <div
-            className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6"
+            style={{
+              background: "rgba(255,255,255,0.95)",
+              backdropFilter: "blur(20px)",
+              border: "1px solid rgba(59, 130, 246, 0.3)",
+              borderRadius: "16px",
+              padding: "2rem",
+              width: "100%",
+              maxWidth: "500px",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-600 flex-1 pr-4">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "1.5rem" }}>
+              <h2 style={{ color: "#1e3a8a", fontSize: "1.3rem", fontWeight: "bold", margin: 0, flex: 1, paddingRight: "1rem" }}>
                 {tasks[openIndex].text}
               </h2>
               <button
                 onClick={() => setOpenIndex(null)}
-                className="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none"
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#60a5fa",
+                  fontSize: "1.5rem",
+                  cursor: "pointer",
+                  lineHeight: 1,
+                  padding: 0,
+                }}
               >
                 ✕
               </button>
             </div>
 
-            <div className="bg-indigo-50 rounded-lg p-4">
-              <p className="text-sm text-gray-600 leading-relaxed">
+            <div style={{ background: "rgba(96, 165, 250, 0.1)", borderRadius: "10px", padding: "1rem", marginBottom: "1rem" }}>
+              <p style={{ color: "#1e3a8a", fontSize: "0.95rem", lineHeight: "1.6", margin: 0 }}>
                 {tasks[openIndex].description}
               </p>
             </div>
 
-            <div className="mt-4 flex items-center gap-1">
-              <span className="text-xs">🕐</span>
-              <span className="text-xs text-gray-400">
-                {tasks[openIndex].createdAt}
-              </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+              <span style={{ fontSize: "0.8rem" }}>🕐</span>
+              <span style={{ fontSize: "0.8rem", color: "#60a5fa" }}>{tasks[openIndex].createdAt}</span>
             </div>
           </div>
         </div>
       )}
+
+      {editIndex !== null && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.4)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 50,
+            padding: "1rem",
+            backdropFilter: "blur(4px)",
+          }}
+          onClick={cancelEdit}
+        >
+          <div
+            style={{
+              background: "rgba(255,255,255,0.95)",
+              backdropFilter: "blur(20px)",
+              border: "1px solid rgba(59, 130, 246, 0.3)",
+              borderRadius: "16px",
+              padding: "2rem",
+              width: "100%",
+              maxWidth: "500px",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+              <h2 style={{ color: "#1e3a8a", fontSize: "1.3rem", fontWeight: "bold", margin: 0 }}>Edit Memo</h2>
+              <button
+                onClick={cancelEdit}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#60a5fa",
+                  fontSize: "1.5rem",
+                  cursor: "pointer",
+                  lineHeight: 1,
+                  padding: 0,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <input
+                type="text"
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                style={{
+                  padding: "0.85rem 1rem",
+                  border: "1px solid rgba(59, 130, 246, 0.3)",
+                  borderRadius: "10px",
+                  fontSize: "0.95rem",
+                  outline: "none",
+                  background: "rgba(255,255,255,0.5)",
+                  color: "#1e3a8a",
+                }}
+              />
+              <textarea
+                value={editDesc}
+                onChange={(e) => setEditDesc(e.target.value)}
+                rows={4}
+                style={{
+                  padding: "0.85rem 1rem",
+                  border: "1px solid rgba(59, 130, 246, 0.3)",
+                  borderRadius: "10px",
+                  fontSize: "0.95rem",
+                  outline: "none",
+                  resize: "none",
+                  background: "rgba(255,255,255,0.5)",
+                  color: "#1e3a8a",
+                  fontFamily: "inherit",
+                }}
+              />
+              <div style={{ display: "flex", gap: "0.75rem" }}>
+                <button
+                  onClick={() => saveEdit(editIndex)}
+                  style={{
+                    flex: 1,
+                    background: "#10b981",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "10px",
+                    padding: "0.85rem",
+                    fontSize: "0.95rem",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                    transition: "opacity 0.2s",
+                  }}
+                  onMouseEnter={(e) => (e.target.style.opacity = "0.9")}
+                  onMouseLeave={(e) => (e.target.style.opacity = "1")}
+                >
+                  Save
+                </button>
+                <button
+                  onClick={cancelEdit}
+                  style={{
+                    flex: 1,
+                    background: "#94a3b8",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "10px",
+                    padding: "0.85rem",
+                    fontSize: "0.95rem",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                    transition: "opacity 0.2s",
+                  }}
+                  onMouseEnter={(e) => (e.target.style.opacity = "0.9")}
+                  onMouseLeave={(e) => (e.target.style.opacity = "1")}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

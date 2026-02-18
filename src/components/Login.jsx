@@ -21,35 +21,35 @@ const Login = () => {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "linear-gradient(135deg, #0f0c29, #302b63, #24243e)",
+      background: "linear-gradient(135deg, #a8e6cf, #7ec8e3, #93c5fd)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      fontFamily: "'Georgia', serif",
+      fontFamily: "'Inter', sans-serif",
       padding: "1rem",
     }}>
       <div style={{
-        background: "rgba(255,255,255,0.05)",
+        background: "rgba(255,255,255,0.25)",
         backdropFilter: "blur(20px)",
-        border: "1px solid rgba(255,255,255,0.1)",
+        border: "1px solid rgba(255,255,255,0.3)",
         borderRadius: "24px",
         padding: "3rem 2.5rem",
         width: "100%",
         maxWidth: "420px",
-        boxShadow: "0 25px 60px rgba(0,0,0,0.5)",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
       }}>
 
         <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
           <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>📓</div>
           <h1 style={{
-            color: "#fff",
+            color: "#1e3a8a",
             fontSize: "1.8rem",
             fontWeight: "bold",
             margin: "0 0 0.4rem 0",
             letterSpacing: "-0.5px",
           }}>Dev Memo</h1>
           <p style={{
-            color: "rgba(255,255,255,0.4)",
+            color: "#3b82f6",
             fontSize: "0.85rem",
             margin: 0,
           }}>Your personal developer journal</p>
@@ -61,7 +61,7 @@ const Login = () => {
             border: "1px solid rgba(255,80,80,0.3)",
             borderRadius: "10px",
             padding: "0.75rem 1rem",
-            color: "#ff8080",
+            color: "#dc2626",
             fontSize: "0.85rem",
             marginBottom: "1.5rem",
             textAlign: "center",
@@ -88,6 +88,7 @@ const Login = () => {
             gap: "0.75rem",
             transition: "opacity 0.2s, transform 0.1s",
             fontFamily: "inherit",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
           }}
           onMouseEnter={(e) => e.target.style.opacity = "0.9"}
           onMouseLeave={(e) => e.target.style.opacity = "1"}
@@ -105,7 +106,7 @@ const Login = () => {
 
         <p style={{
           textAlign: "center",
-          color: "rgba(255,255,255,0.25)",
+          color: "#60a5fa",
           fontSize: "0.75rem",
           marginTop: "1.5rem",
           marginBottom: 0,
