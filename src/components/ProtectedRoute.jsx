@@ -1,12 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { auth } from "./firebase";
-import Memo from "./components/Memo";
-import Login from "./components/Login";
-import ProtectedRoute from "./components/ProtectedRoute";
-import "./App.css";
+import { auth } from "../firebase";
 
-function App() {
+const ProtectedRoute = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -35,24 +31,7 @@ function App() {
     );
   }
 
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route 
-          path="/" 
-          element={user ? <Navigate to="/memo" /> : <Login />} 
-        />
-        <Route
-          path="/memo"
-          element={
-            <ProtectedRoute>
-              <Memo />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-    </BrowserRouter>
-  );
-}
+  return user ? children : <Navigate to="/" />;
+};
 
-export default App;
+export default ProtectedRoute;
