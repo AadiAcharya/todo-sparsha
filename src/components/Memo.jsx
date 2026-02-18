@@ -1,4 +1,15 @@
-import React, { useState, useEffect } from "react";
+import { auth, db } from "../firebase";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  doc,
+  query,
+  where,
+  updateDoc,
+} from "firebase/firestore";
+import { useEffect, useState } from "react";
 import dayjs from "dayjs";
 
 const Memo = () => {
@@ -8,11 +19,35 @@ const Memo = () => {
   const [editIndex, setEditIndex] = useState(null);
   const [editText, setEditText] = useState("");
   const [editDesc, setEditDesc] = useState("");
+  const [user, setUser] = useState(null);
 
   const [tasks, setTasks] = useState(() => {
     const savedTasks = localStorage.getItem("memos");
     return savedTasks ? JSON.parse(savedTasks) : [];
   });
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      setUser(currentUser);
+    });
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchMemos = async () => {
+      const memoRef = collection(db, "memos");
+      const q = query(memoRef, where("userId", "==", user.uid));
+      const querySnapshot = await getDocs(q);
+      const loadedMemos = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setTasks(loadedMemos);
+    };
+    fetchMemos();
+  }, [user]);
 
   useEffect(() => {
     localStorage.setItem("memos", JSON.stringify(tasks));
@@ -22,25 +57,34 @@ const Memo = () => {
     setNewTask(event.target.value);
   }
 
-  function addToList() {
-    if (newTask.trim() !== "") {
-      const updatedTasks = [
-        ...tasks,
-        {
+  async function addToList() {
+    if (newTask.trim() !== "" && user) {
+      try {
+        const newMemo = {
           text: newTask,
           description: newDesc,
           createdAt: dayjs().format("DD/MM/YYYY hh:mm A"),
-        },
-      ];
-      setTasks(updatedTasks);
-      setNewTask("");
-      setNewDesc("");
+          userId: user.uid,
+        };
+
+        const docRef = await addDoc(collection(db, "memos"), newMemo);
+        setTasks([...tasks, { id: docRef.id, ...newMemo }]);
+        setNewTask("");
+        setNewDesc("");
+      } catch (error) {
+        console.error("Error adding memo:", error);
+      }
     }
   }
 
-  function deleteFromList(index) {
-    const updateTasks = tasks.filter((_, i) => i !== index);
-    setTasks(updateTasks);
+  async function deleteFromList(index) {
+  try{
+    await deleteDoc(doc(db, "memos", tasks[index].id))
+    const updateTasks = tasks.filter((_, i) => i !== index)
+    setTasks(updateTasks)
+  } catch (error){
+    console.error("error deleting memo", error)
+  }
   }
 
   function toggleNotes(index) {

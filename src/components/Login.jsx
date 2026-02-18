@@ -1,34 +1,21 @@
 import { useNavigate } from "react-router-dom";
+import { signInWithPopup } from "firebase/auth";
+import { auth, googleProvider } from "../firebase";
 import { useState } from "react";
 
 const Login = () => {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
-
   const navigate = useNavigate();
 
-  function pageChange() {
-    setError("");
-    if (!name || !email || !password || !confirmPassword) {
-      setError("Please fill in all fields");
-      return;
+  async function handleGoogleLogin() {
+    try {
+      setError("");
+      await signInWithPopup(auth, googleProvider);
+      navigate("/memo");
+    } catch (error) {
+      setError(error.message);
+      console.error("Login error:", error);
     }
-    if (!email.includes("@")) {
-      setError("Please enter a valid email");
-      return;
-    }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-    navigate("/memo");
   }
 
   return (
@@ -52,19 +39,15 @@ const Login = () => {
         boxShadow: "0 25px 60px rgba(0,0,0,0.5)",
       }}>
 
-        {/* Header */}
         <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
-          <div style={{
-            fontSize: "2.5rem",
-            marginBottom: "0.5rem",
-          }}>📓</div>
+          <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>📓</div>
           <h1 style={{
             color: "#fff",
             fontSize: "1.8rem",
             fontWeight: "bold",
             margin: "0 0 0.4rem 0",
             letterSpacing: "-0.5px",
-          }}>Code Memo</h1>
+          }}>Dev Memo</h1>
           <p style={{
             color: "rgba(255,255,255,0.4)",
             fontSize: "0.85rem",
@@ -72,7 +55,6 @@ const Login = () => {
           }}>Your personal developer journal</p>
         </div>
 
-        {/* Error message */}
         {error && (
           <div style={{
             background: "rgba(255, 80, 80, 0.15)",
@@ -88,64 +70,22 @@ const Login = () => {
           </div>
         )}
 
-        {/* Fields */}
-        {[
-          { label: "Full Name", type: "text", value: name, setter: setName, placeholder: "John Doe" },
-          { label: "Email", type: "text", value: email, setter: setEmail, placeholder: "john@example.com" },
-          { label: "Password", type: "password", value: password, setter: setPassword, placeholder: "Min. 6 characters" },
-          { label: "Confirm Password", type: "password", value: confirmPassword, setter: setConfirmPassword, placeholder: "Repeat your password" },
-        ].map((field) => (
-          <div key={field.label} style={{ marginBottom: "1.2rem" }}>
-            <label style={{
-              display: "block",
-              color: "rgba(255,255,255,0.5)",
-              fontSize: "0.75rem",
-              letterSpacing: "1px",
-              textTransform: "uppercase",
-              marginBottom: "0.4rem",
-            }}>
-              {field.label}
-            </label>
-            <input
-              type={field.type}
-              placeholder={field.placeholder}
-              value={field.value}
-              onChange={(e) => field.setter(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && pageChange()}
-              style={{
-                width: "100%",
-                background: "rgba(255,255,255,0.07)",
-                border: "1px solid rgba(255,255,255,0.12)",
-                borderRadius: "12px",
-                padding: "0.85rem 1rem",
-                color: "#fff",
-                fontSize: "0.95rem",
-                outline: "none",
-                boxSizing: "border-box",
-                transition: "border 0.2s",
-                fontFamily: "inherit",
-              }}
-              onFocus={(e) => e.target.style.border = "1px solid rgba(139,92,246,0.6)"}
-              onBlur={(e) => e.target.style.border = "1px solid rgba(255,255,255,0.12)"}
-            />
-          </div>
-        ))}
-
-        {/* Button */}
         <button
-          onClick={pageChange}
+          onClick={handleGoogleLogin}
           style={{
             width: "100%",
-            background: "linear-gradient(135deg, #8b5cf6, #6366f1)",
+            background: "#fff",
             border: "none",
             borderRadius: "12px",
             padding: "1rem",
-            color: "#fff",
+            color: "#333",
             fontSize: "1rem",
-            fontWeight: "bold",
+            fontWeight: "600",
             cursor: "pointer",
-            marginTop: "0.5rem",
-            letterSpacing: "0.5px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "0.75rem",
             transition: "opacity 0.2s, transform 0.1s",
             fontFamily: "inherit",
           }}
@@ -154,7 +94,13 @@ const Login = () => {
           onMouseDown={(e) => e.target.style.transform = "scale(0.98)"}
           onMouseUp={(e) => e.target.style.transform = "scale(1)"}
         >
-          Enter Journal →
+          <svg width="20" height="20" viewBox="0 0 48 48">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          </svg>
+          Continue with Google
         </button>
 
         <p style={{
@@ -164,7 +110,7 @@ const Login = () => {
           marginTop: "1.5rem",
           marginBottom: 0,
         }}>
-          Firebase auth coming soon
+          Secure authentication powered by Firebase
         </p>
 
       </div>
